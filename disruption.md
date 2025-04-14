@@ -223,3 +223,66 @@ if !results.AllNonPendingPodsScheduled() {
 ## まとめ
 
 `Candidate.DisruptionCost` は、Karpenter の統合プロセスにおいて重要な役割を果たします。この値は、ノードの統合可能性を効率的に評価し、クラスタのリソース最適化を実現するために使用されます。
+
+# DisruptionReason
+
+## 概要
+`DisruptionReason` は、ノードプールのディスラプション（中断や変更）の理由を表す列挙型です。これにより、特定の理由に基づいてノードのスケジュールや削除が制御されます。
+
+## 主なDisruptionReason
+以下は、現在定義されている主な `DisruptionReason` です。
+
+1. **DisruptionReasonEmpty**
+   - ノードが空である場合に設定されます。
+   - 主にリソースの効率化のために使用されます。
+
+2. **DisruptionReasonUnderutilized**
+   - ノードが十分に活用されていない場合に設定されます。
+   - リソースの最適化を目的として、ノードの統合や削除が検討されます。
+   - **関連ソースコード**:
+     - `/pkg/controllers/disruption/singlenodeconsolidation.go` の `Reason` メソッド:
+       ```go
+       func (s *SingleNodeConsolidation) Reason() v1.DisruptionReason {
+           return v1.DisruptionReasonUnderutilized
+       }
+       ```
+     - `/pkg/controllers/disruption/multinodeconsolidation.go` の `Reason` メソッド:
+       ```go
+       func (m *MultiNodeConsolidation) Reason() v1.DisruptionReason {
+           return v1.DisruptionReasonUnderutilized
+       }
+       ```
+
+3. **DisruptionReasonDrifted**
+   - ノードが期待される状態から逸脱している場合に設定されます。
+   - 例として、ノードの設定やラベルが変更された場合が含まれます。
+
+## ライフサイクル
+
+### DisruptionReasonEmpty
+- **設定タイミング**: ノードが空であることが検出されたとき。
+- **利用タイミング**: 空のノードを削除する際に使用されます。
+
+### DisruptionReasonUnderutilized
+- **設定タイミング**: ノードのリソース使用率が一定の閾値を下回ったとき。
+- **関連ソースコード**:
+  - `/pkg/controllers/disruption/singlenodeconsolidation.go` の `Reason` メソッド:
+    ```go
+    func (s *SingleNodeConsolidation) Reason() v1.DisruptionReason {
+        return v1.DisruptionReasonUnderutilized
+    }
+    ```
+  - `/pkg/controllers/disruption/multinodeconsolidation.go` の `Reason` メソッド:
+    ```go
+    func (m *MultiNodeConsolidation) Reason() v1.DisruptionReason {
+        return v1.DisruptionReasonUnderutilized
+    }
+    ```
+- **利用タイミング**: リソースの効率化を目的として、ノードの統合や削除を行う際に使用されます。
+
+### DisruptionReasonDrifted
+- **設定タイミング**: ノードが期待される状態から逸脱していることが検出されたとき。
+- **利用タイミング**: 逸脱したノードを修正または再作成する際に使用されます。
+
+## まとめ
+`DisruptionReason` は、ノードプールの管理において重要な役割を果たします。各理由は特定の条件下で設定され、ノードのライフサイクル管理に利用されます。これにより、リソースの効率化やシステムの安定性が向上します。
