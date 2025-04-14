@@ -32,6 +32,9 @@
   - Podの`taints`や`tolerations`の確認方法
   - 各種メトリクスの記録と管理方法
 
+### [disruption.md](./disruption.md)
+- **説明**: `Candidate.DisruptionCost` のライフサイクルとその利用方法。
+
 ## 使用方法
 
 これらのドキュメントを参照することで、Karpenterの設計や機能について深く理解することができます。特定のトピックに関心がある場合は、該当するファイルを開いて詳細を確認してください。
