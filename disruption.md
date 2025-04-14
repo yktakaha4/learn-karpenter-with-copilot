@@ -36,6 +36,97 @@ func ReschedulingCost(ctx context.Context, pods []*corev1.Pod) float64 {
 }
 ```
 
+### PodDeletionCost（Pod 削除コスト）
+
+`PodDeletionCost` は、Kubernetes の Pod に設定できるアノテーションで、Pod の削除順序を制御するために使用されます。この値は、ReplicaSet や他のコントローラーが Pod を削除する際の優先順位を決定するために考慮されます。
+
+- **アノテーションのキー**: `"controller.kubernetes.io/pod-deletion-cost"`
+- **値の範囲**: 整数値で指定され、正の値は削除されにくいことを示し、負の値は削除されやすいことを示します。
+
+このアノテーションは、特定の Pod を優先的に保持したい場合や、特定の Pod を優先的に削除したい場合に役立ちます。
+
+#### `EvictionCost` 関数との関係
+
+`EvictionCost` 関数では、`PodDeletionCost` の値を使用して削除コストを計算します。この値は、以下のようにスケールダウンされ、最終的な削除コストに加算されます：
+
+```go
+cost += podDeletionCost / math.Pow(2, 27.0)
+```
+
+この計算により、`PodDeletionCost` の影響が適切に調整され、削除コスト全体に反映されます。
+
+#### 使用例
+
+以下は、`PodDeletionCost` を設定する例です：
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: example-pod
+  annotations:
+    controller.kubernetes.io/pod-deletion-cost: "100"
+spec:
+  containers:
+  - name: example-container
+    image: nginx
+```
+
+この例では、`example-pod` の削除コストが高く設定されており、他の Pod よりも削除されにくくなります。
+
+### Pod Priority（Pod の優先度）
+
+`Pod Priority` は、Kubernetes のスケジューリングにおいて、Pod の重要度を示すために使用されます。優先度の高い Pod は、リソースが不足している場合に優先的にスケジュールされ、必要に応じて低優先度の Pod をプリエンプト（強制終了）することができます。
+
+#### 優先度の設定
+
+Pod の優先度は、`PriorityClass` を使用して設定されます。`PriorityClass` は、クラスター管理者が作成するリソースで、各クラスに関連付けられた整数値（優先度）を定義します。優先度の値が高いほど、Pod の重要度が高くなります。
+
+以下は、`PriorityClass` の例です：
+
+```yaml
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: high-priority
+value: 1000
+preemptionPolicy: PreemptLowerPriority
+globalDefault: false
+description: "This priority class is for high priority pods."
+```
+
+この例では、`high-priority` という名前の優先度クラスが作成され、値は `1000` に設定されています。
+
+#### `EvictionCost` 関数との関係
+
+`EvictionCost` 関数では、Pod の優先度を使用して削除コストを計算します。優先度の値は、以下のようにスケールダウンされ、削除コストに加算されます：
+
+```go
+if p.Spec.Priority != nil {
+    cost += float64(*p.Spec.Priority) / math.Pow(2, 25)
+}
+```
+
+この計算により、優先度の高い Pod は削除コストが高くなり、削除されにくくなります。
+
+#### 使用例
+
+以下は、`PriorityClass` を使用して Pod の優先度を設定する例です：
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: high-priority-pod
+spec:
+  priorityClassName: high-priority
+  containers:
+  - name: example-container
+    image: nginx
+```
+
+この例では、`high-priority` クラスが適用され、Pod の優先度が高く設定されています。
+
 ### EvictionCost（削除コスト）
 
 `EvictionCost` 関数は、特定の Pod を削除する際の中断コストを計算します。このコストは、以下の要素に基づいて計算されます：
